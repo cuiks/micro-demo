@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package  hello;
+option go_package = "proto/kshcui";
+
+service Hello {
+  rpc SayHello(SayRequest) returns (SayResponse){}
+}
+
+message SayRequest {
+  string msg = 1;
+}
+
+message SayResponse {
+  string answer = 1;
+}
