@@ -8,7 +8,9 @@ import (
 	service2 "github.com/cuiks/user/domain/service"
 	"github.com/cuiks/user/handler"
 	pb "github.com/cuiks/user/proto"
+	opentracing2 "github.com/go-micro/plugins/v4/wrapper/trace/opentracing"
 	"github.com/jinzhu/gorm"
+	"github.com/opentracing/opentracing-go"
 	"go-micro.dev/v4"
 	"go-micro.dev/v4/logger"
 	"go-micro.dev/v4/registry"
@@ -28,18 +30,27 @@ func main() {
 		logger.Error(err)
 	}
 	// 注册中心
-	registry := consul.NewRegistry(func(options *registry.Options) {
+	consulRegistry := consul.NewRegistry(func(options *registry.Options) {
 		options.Addrs = []string{
 			"127.0.0.1:8500",
 		}
 	})
+	// 链路追踪
+	trace, io, err := common.NewTrace("micro.service.user", "127.0.0.1:6831")
+	if err != nil {
+		logger.Fatal(err)
+	}
+	defer io.Close()
+	opentracing.SetGlobalTracer(trace)
+
 	// Create service
 	srv := micro.NewService(
 		micro.Name(service),
 		micro.Version(version),
 		// 地址和端口
 		micro.Address("127.0.0.1:8002"),
-		micro.Registry(registry),
+		micro.Registry(consulRegistry),
+		micro.WrapHandler(opentracing2.NewHandlerWrapper(opentracing.GlobalTracer())),
 	)
 	srv.Init()
 
